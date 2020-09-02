@@ -29,6 +29,9 @@ public class TradBox extends HBox implements Comparable<TradBox> {
 	public void addComponent() {
 		titre.setPrefWidth(35);
 		titre.setMinWidth(35);
+		titre.setOnMouseClicked(event -> {
+			description.requestFocus();
+		});
 		this.getChildren().add(titre);
 		this.getChildren().add(description);
 		description.getStyleClass().add("double-underline");
