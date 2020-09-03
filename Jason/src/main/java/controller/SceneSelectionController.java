@@ -23,7 +23,7 @@ public class SceneSelectionController implements Initializable {
 
 	public void handleShowSceneCreateProject(ActionEvent event){
 		try {
-			Parent sceneCreation = FXMLLoader.load(getClass().getResource("../resources/fxml/sceneCreationProjet.fxml"));
+			Parent sceneCreation = FXMLLoader.load(getClass().getResource("/resources/fxml/sceneCreationProjet.fxml"));
 			Stage stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
 			stage.setScene(new Scene(sceneCreation));
 		} catch (IOException e) {

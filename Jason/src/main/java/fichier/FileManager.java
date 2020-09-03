@@ -1,7 +1,10 @@
 package fichier;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -89,5 +92,25 @@ public class FileManager {
 		if(file == null)
 			return null;
 		return null;
+	}
+	
+	public static String readFile(File file) throws IOException {
+		BufferedReader br = null;
+		StringBuilder informations = new StringBuilder();
+		try {
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+			String line = "";
+			int ligne = 0;
+			while ((line = br.readLine()) != null) {
+				informations.append(line);
+			}
+		}
+		catch(IOException e) {
+			throw e;
+		}
+		finally {
+			br.close();
+		}
+		return informations.toString();
 	}
 }

@@ -9,7 +9,7 @@ import exception.NomVideException;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TreeView;
+import javafx.scene.control.TreeTableView;
 import projet.Project;
 import projet.node.Dossier;
 import projet.tradBox.TradBox;
@@ -17,13 +17,14 @@ import projet.tradBox.TradBox;
 public class SceneProjetController implements Initializable {
 
 	@FXML
-	TreeView<Dossier> idTreeViewJson;
+	TreeTableView<Dossier> idTreeTableViewJson;
 	
 	@FXML
 	ListView<TradBox> idListViewTraduction;
 	
 	private Path traductions, page;
 	private String langue;
+	@SuppressWarnings("unused")
 	private Project projet;
 	
 	@Override
@@ -52,7 +53,7 @@ public class SceneProjetController implements Initializable {
 		this.traductions = traductions;
 		this.page = page;
 		this.langue = defaultLanguage;
-		projet = new Project(traductions, page, langue, idTreeViewJson, idListViewTraduction);
+		projet = new Project(traductions, page, langue, idTreeTableViewJson, idListViewTraduction);
 	}
 
 }

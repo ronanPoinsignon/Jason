@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,16 +21,21 @@ import com.google.gson.JsonSyntaxException;
 import exception.NomVideException;
 import fichier.DirectoryListener;
 import fichier.FileListener;
+import fichier.FileManager;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TreeView;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeSortMode;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableColumn.SortType;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.input.KeyCode;
 import projet.node.Dossier;
 import projet.node.DossierReel;
 import projet.node.Racine;
 import projet.tradBox.TradBox;
 import projet.treeView.DossierTreeItem;
-import projet.treeView.NodeTreeCell;
 import utils.JsonConverter;
 
 /**
@@ -38,32 +44,46 @@ import utils.JsonConverter;
  *
  */
 public class Project {
-
+	
 	private Map<String, JsonObject> jsonMap = new HashMap<>();
 	private Map<String, TradBox> mapTrad = new HashMap<>();
 	private List<String> pathList = new ArrayList<>();
 	
 	private Path traductions, page;
 	private String defaultLanguage;
-	private TreeView<Dossier> view;
+	private TreeTableView<Dossier> view;
 	private ListView<TradBox> tradView;
 	private String jsonValue;
 	
-	public Project(Path traduction, Path page, String defaultLanguage, TreeView<Dossier> view, ListView<TradBox> tradView) throws IOException, NomVideException {
+	public Project(Path traduction, Path page, String defaultLanguage, TreeTableView<Dossier> view, ListView<TradBox> tradView) throws IOException, NomVideException {
 		this.traductions = traduction;
 		this.page = page;
 		this.defaultLanguage = defaultLanguage;
 		this.view = view;
 		this.tradView = tradView;
+		TreeTableColumn<Dossier, String> colonne = new TreeTableColumn<>("Variables");
+		colonne.prefWidthProperty().bind(view.widthProperty());
+		colonne.setResizable(false);
+		colonne.setCellValueFactory(p -> {
+			return new ReadOnlyStringWrapper(p.getValue().getValue().getName());
+		});
+		view.getColumns().add(colonne);
 		this.setJsonList(traduction);
 		this.setArborescence();
 		this.setLanguageList();
 		this.setFileListener();
 		view.setShowRoot(false);
-		view.setCellFactory(p -> new NodeTreeCell());
+		view.setSortMode(TreeSortMode.ALL_DESCENDANTS);
+		colonne.setSortType(SortType.DESCENDING);
 		view.getSelectionModel().selectedItemProperty()
 		.addListener((observable, oldValue, newValue) -> {
-			String path = newValue.getValue().getPathWithoutRoot();
+			String path = null;
+			try{
+				path = newValue.getValue().getPathWithoutRoot();
+			}
+			catch(NullPointerException e) {
+				
+			}
 			if(jsonMap.get(defaultLanguage).get(path) != null) {
 				jsonValue = path;
 				for(String key : jsonMap.keySet()) {
@@ -129,12 +149,12 @@ public class Project {
 		for(File fichier : dossierTrad.toFile().listFiles()) {
 			if(fichier.getName().endsWith(".json")) {
 				String path = dossierTrad.toAbsolutePath() + "\\" + fichier.getName();
-				byte[] fic = Files.readAllBytes(Paths.get(path));
+				String fic = FileManager.readFile(new File(path));
 				pathList.add(path);
 				JsonObject json = null;
 				String key = fichier.getName().substring(0, fichier.getName().lastIndexOf(".json"));
 				try {
-					json = JsonConverter.StringToJsonObject(new String(fic));
+					json = JsonConverter.StringToJsonObject(fic);
 					jsonMap.put(key, json);
 				}
 				catch(IllegalStateException e) {
@@ -179,8 +199,19 @@ public class Project {
 			DossierReel.ajouter(key);
 		}
 		DossierTreeItem dos = new DossierTreeItem(Racine.getRacine());
-		this.view.setRoot(dos);
-		DossierTreeItem.generate(dos, Racine.getRacine());
+		Platform.runLater(new Runnable() {
+			
+			@Override
+			public void run() {
+				Project.this.view.setRoot(dos);
+				try {
+					DossierTreeItem.generate(dos, Racine.getRacine());
+				} catch (NomVideException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 	
 	public void setLanguageList() {
@@ -225,6 +256,7 @@ public class Project {
 			}
 		});
 	}
+	
 	public void addTradBox(File fichier, String key) {
 		JsonObject json = null;
 		String value = "";
@@ -246,9 +278,10 @@ public class Project {
 			@Override
 			public void run() {
 				tradView.getItems().add(tr);
-				sort();
+				sortTradView();
 			}
 		});
+		//sortJsonView();
 		jsonMap.put(key, json);
 		mapTrad.put(key, tr);
 	}
@@ -280,7 +313,14 @@ public class Project {
 				}
 			}
 		});
-		sort();
+		try {
+			setArborescence();
+		} catch (NomVideException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		sortTradView();
+		//sortJsonView();
 	}
 	
 	public JsonObject getDefaultJson() {
@@ -311,7 +351,7 @@ public class Project {
 		this.defaultLanguage = defaultLanguage;
 	}
 	
-	public void sort() {
+	public void sortTradView() {
 		Platform.runLater(new Runnable() {
 			
 			@Override
@@ -324,5 +364,25 @@ public class Project {
 				});
 			}
 		});
+	}
+	
+	public void sortJsonView() {
+		if(view.getRoot() != null) {
+			Collections.sort(view.getRoot().getChildren(), new Comparator<TreeItem<Dossier>>() {
+	
+				@Override
+				public int compare(TreeItem<Dossier> o1, TreeItem<Dossier> o2) {
+					return compare(o1.getValue().getName(), o2.getValue().getName());
+				}
+
+				public int compare(String s1, String s2) {
+					System.out.println(s1 + " ; " + s2);
+					System.out.println(s1.compareTo(s2));
+					return s1.compareTo(s2);
+				}
+			});
+		}
+		else
+			System.out.println("null");
 	}
 }

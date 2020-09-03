@@ -26,14 +26,14 @@ public class DossierReel extends Dossier {
 	}
 	
 	/**
-	 * Supprime tous les sous-dossiers / fichiers du dossier de base.
+	 * Supprime tous les sous-dossiers / fichiers du dossier donné.
 	 * @param dossier
 	 */
 	public static void removeAll(Dossier dossier) {
 		List<Dossier> liste = dossier.getFiles();
-		for(Dossier doss : liste) {
-			removeAll(doss);
-			dossier.getFiles().remove(doss);
+		for(int i = 0; i < liste.size(); i++) {
+			removeAll(liste.get(i));
+			dossier.getFiles().remove(liste.get(i));
 		}
 	}
 	

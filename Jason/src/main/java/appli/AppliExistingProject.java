@@ -21,9 +21,6 @@ public class AppliExistingProject extends Application{
 			Appli.main(args);
 			return;
 		}
-		System.out.println(args[0]);
-		System.out.println(args[1]);
-		System.out.println(args[2]);
 		Application.launch(args);
 	}
 

@@ -57,7 +57,7 @@
 }
 
 .list-cell:filled:selected{
-	-fx-background-color: white;
+	-fx-background-color: transparent;
 }
 
 .split-pane:horizontal > .split-pane-divider {
