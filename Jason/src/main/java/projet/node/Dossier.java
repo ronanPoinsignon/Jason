@@ -11,7 +11,7 @@ import exception.NomVideException;
  * @author ronan
  *
  */
-public abstract class Dossier {
+public abstract class Dossier implements Comparable<Dossier> {
 
 	private static final String delimitation = ".";
 		
@@ -90,5 +90,10 @@ public abstract class Dossier {
 	@Override
 	public String toString() {
 		return this.name;
+	}
+
+	@Override
+	public int compareTo(Dossier o) {
+		return this.name.compareTo(o.name);
 	}
 }

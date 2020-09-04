@@ -34,7 +34,7 @@ public class SceneSelectionController implements Initializable {
 	public void handleShowSceneExistingProject(ActionEvent event){
 		Stage stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
 		try {
-			AppliExistingProject.mainApp(stage, new String[]{"C:\\Users\\ronan\\Desktop\\ronan\\babel\\traductions", "C:\\Users\\ronan\\Desktop\\ronan\\babel\\traductions", "fr"});
+			AppliExistingProject.mainApp(stage, new String[]{"C:\\Users\\ronan\\Desktop\\ronan\\babel\\traductions", "C:\\Users\\ronan\\Desktop\\ronan\\babel\\components", "fr"});
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (NomVideException e) {

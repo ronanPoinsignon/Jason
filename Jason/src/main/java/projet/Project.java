@@ -3,9 +3,7 @@ package projet;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -26,7 +24,6 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeSortMode;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumn.SortType;
 import javafx.scene.control.TreeTableView;
@@ -61,6 +58,10 @@ public class Project {
 		this.defaultLanguage = defaultLanguage;
 		this.view = view;
 		this.tradView = tradView;
+		this.setJsonList(traduction);
+		this.setArborescence();
+		this.setLanguageList();
+		this.setFileListener();
 		TreeTableColumn<Dossier, String> colonne = new TreeTableColumn<>("Variables");
 		colonne.prefWidthProperty().bind(view.widthProperty());
 		colonne.setResizable(false);
@@ -68,13 +69,9 @@ public class Project {
 			return new ReadOnlyStringWrapper(p.getValue().getValue().getName());
 		});
 		view.getColumns().add(colonne);
-		this.setJsonList(traduction);
-		this.setArborescence();
-		this.setLanguageList();
-		this.setFileListener();
-		view.setShowRoot(false);
-		view.setSortMode(TreeSortMode.ALL_DESCENDANTS);
+		view.getSortOrder().add(colonne);
 		colonne.setSortType(SortType.DESCENDING);
+		view.setShowRoot(false);
 		view.getSelectionModel().selectedItemProperty()
 		.addListener((observable, oldValue, newValue) -> {
 			String path = null;
@@ -155,6 +152,12 @@ public class Project {
 				String key = fichier.getName().substring(0, fichier.getName().lastIndexOf(".json"));
 				try {
 					json = JsonConverter.StringToJsonObject(fic);
+					try {
+						json = JsonConverter.sortJson(json);
+					}
+					catch(IOException e) {
+						
+					}
 					jsonMap.put(key, json);
 				}
 				catch(IllegalStateException e) {
@@ -194,6 +197,7 @@ public class Project {
 	 */
 	public void setArborescence() throws NomVideException {
 		DossierReel.removeAll(Racine.getRacine());
+		DossierReel.printArborescence(Racine.getRacine());
 		JsonObject json = getDefaultJson();
 		for(String key : json.keySet()) {
 			DossierReel.ajouter(key);
@@ -207,7 +211,6 @@ public class Project {
 				try {
 					DossierTreeItem.generate(dos, Racine.getRacine());
 				} catch (NomVideException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -282,6 +285,11 @@ public class Project {
 			}
 		});
 		//sortJsonView();
+		try {
+			json = JsonConverter.sortJson(json);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		jsonMap.put(key, json);
 		mapTrad.put(key, tr);
 	}
@@ -293,6 +301,12 @@ public class Project {
 		boolean hasPb = false;
 		try {
 			json = JsonConverter.getJsonFromFile(fichier.toPath());
+			try {
+				json = JsonConverter.sortJson(json);
+			}
+			catch(IOException e) {
+				
+			}
 			jsonMap.put(key, json);
 		} catch (IOException e) {
 			e.printStackTrace();

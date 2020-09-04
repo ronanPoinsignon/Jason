@@ -100,7 +100,6 @@ public class FileManager {
 		try {
 			br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
 			String line = "";
-			int ligne = 0;
 			while ((line = br.readLine()) != null) {
 				informations.append(line);
 			}

@@ -33,7 +33,7 @@ public class DossierReel extends Dossier {
 		List<Dossier> liste = dossier.getFiles();
 		for(int i = 0; i < liste.size(); i++) {
 			removeAll(liste.get(i));
-			dossier.getFiles().remove(liste.get(i));
+			dossier.getFiles().removeAll(dossier.getFiles());
 		}
 	}
 	
