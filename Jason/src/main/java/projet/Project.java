@@ -241,6 +241,8 @@ public class Project {
 					tradView.getItems().remove(tradbox);
 				} catch(NullPointerException e) {
 					hasPb = true;
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 				tradbox.setEditable(!hasPb);
 			}

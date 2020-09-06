@@ -3,8 +3,11 @@ package fichier;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -111,5 +114,24 @@ public class FileManager {
 			br.close();
 		}
 		return informations.toString();
+	}
+	
+	public static void writeFile(File file, String content) throws IOException {
+		FileOutputStream output = null;
+		PrintStream str = null;
+		try {
+			output = new FileOutputStream(file);
+			str = new PrintStream(output, true, StandardCharsets.UTF_8.toString());
+			str.write(content.getBytes());
+		}
+		catch(IOException e) {
+			throw e;
+		}
+		finally {
+			if(str != null)
+				str.close();
+			if(output != null)
+				output.close();
+		}
 	}
 }

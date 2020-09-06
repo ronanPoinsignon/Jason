@@ -1,9 +1,6 @@
 package utils;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,6 +12,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import fichier.FileManager;
 
 /**
  * Classe permettant la manipulation d'objets json.
@@ -35,17 +34,15 @@ public class JsonConverter {
 		return new Gson().fromJson(jObject, classe);
 	}
 	
-	public static void saveJson(JsonObject json, Path path) throws FileNotFoundException {
+	public static void saveJson(JsonObject json, Path path) throws IOException {
 		String str = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(json);
-		PrintWriter pw = new PrintWriter(path.toFile());
-		pw.write(str);
-		pw.close();
+		FileManager.writeFile(path.toFile(), str);
 	}
 	
 	public static JsonObject getJsonFromFile(Path file) throws IOException {
-		byte[] fic = null;
+		String fic = null;
 		JsonObject json = null;
-		fic = Files.readAllBytes(file);
+		fic = FileManager.readFile(file.toFile());
 		json = JsonConverter.StringToJsonObject(new String(fic));
 		return json;
 	}

@@ -27,6 +27,10 @@ import utils.JsonConverter;
 
 public class SceneProjetController implements Initializable {
 
+	private static final String pattern1 = "(?<=[^>]*id=\")([^\"*]*)(?=\"[ ]*defaultMessage=\"[^\"]*\"[^>]*>)";
+	private static final String pattern2 = "(?<=[^>]*defaultMessage=\"[^\"]*\"[ ]{0,100}id=\")([^\"*]*)(?=\"[^>]*>)";
+	
+	
 	@FXML
 	TreeTableView<Dossier> idTreeTableViewJson;
 	
@@ -68,6 +72,7 @@ public class SceneProjetController implements Initializable {
 		this.traductions = traductions;
 		this.page = page;
 		this.langue = defaultLanguage;
+		//readFiles(page.toFile(), new JsonObject());
 		projet = new Project(traductions, page, langue, idTreeTableViewJson, idListViewTraduction);
 	}
 	
@@ -82,9 +87,14 @@ public class SceneProjetController implements Initializable {
 				System.out.println("NAME : " + fichier.getPath());
 				String fic = FileManager.readFile(fichier);
 				Matcher matcher = Pattern.compile("<[^>]*(/)?>").matcher(fic);
+				Matcher matcherVariable = Pattern.compile(pattern1 + "|" + pattern2).matcher(fic);
 				while (matcher.find()) {
 					String m = matcher.group();
 					allMatches.add(m);
+				}
+				while (matcherVariable.find()) {
+					String m = matcherVariable.group();
+					System.out.println(m);
 				}
 			}
 			for(String m : allMatches) {
