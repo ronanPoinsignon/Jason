@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -22,6 +22,8 @@ import fichier.FileListener;
 import fichier.FileManager;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
@@ -45,6 +47,7 @@ public class Project {
 	private Map<String, JsonObject> jsonMap = new HashMap<>();
 	private Map<String, TradBox> mapTrad = new HashMap<>();
 	private List<String> pathList = new ArrayList<>();
+	private List<TreeItem<Dossier>> itemList = new ArrayList<>();
 	
 	private Path traductions, page;
 	private String defaultLanguage;
@@ -74,26 +77,7 @@ public class Project {
 		view.setShowRoot(false);
 		view.getSelectionModel().selectedItemProperty()
 		.addListener((observable, oldValue, newValue) -> {
-			String path = null;
-			try{
-				path = newValue.getValue().getPathWithoutRoot();
-			}
-			catch(NullPointerException e) {
-				
-			}
-			if(jsonMap.get(defaultLanguage).get(path) != null) {
-				jsonValue = path;
-				for(String key : jsonMap.keySet()) {
-					String value = "";
-					try {
-						value = jsonMap.get(key).get(path).getAsString();
-					}
-					catch(NullPointerException e) {
-						
-					}
-					mapTrad.get(key).setDescription(value);
-				}
-			}
+			modifyJson(newValue);
 		});
 		new DirectoryListener(traduction.toFile(), 1000) {
 			
@@ -197,7 +181,6 @@ public class Project {
 	 */
 	public void setArborescence() throws NomVideException {
 		DossierReel.removeAll(Racine.getRacine());
-		DossierReel.printArborescence(Racine.getRacine());
 		JsonObject json = getDefaultJson();
 		for(String key : json.keySet()) {
 			DossierReel.ajouter(key);
@@ -208,8 +191,17 @@ public class Project {
 			@Override
 			public void run() {
 				Project.this.view.setRoot(dos);
+				Project.this.addItemEvent(dos);
 				try {
 					DossierTreeItem.generate(dos, Racine.getRacine());
+					addItemEvent(dos);
+
+					List<String> str = itemList.stream().map(TreeItem<Dossier>::getValue).map(Dossier::getPath).collect(Collectors.toList());
+					for(TreeItem<Dossier> dossier : dos.getChildren()) {
+						if(str.contains(dossier.getValue().getPath())) {
+							dossier.setExpanded(true);
+						}
+					}
 				} catch (NomVideException e) {
 					e.printStackTrace();
 				}
@@ -286,7 +278,6 @@ public class Project {
 				sortTradView();
 			}
 		});
-		//sortJsonView();
 		try {
 			json = JsonConverter.sortJson(json);
 		} catch (IOException e) {
@@ -336,7 +327,6 @@ public class Project {
 			e.printStackTrace();
 		}
 		sortTradView();
-		//sortJsonView();
 	}
 	
 	public JsonObject getDefaultJson() {
@@ -382,23 +372,47 @@ public class Project {
 		});
 	}
 	
-	public void sortJsonView() {
-		if(view.getRoot() != null) {
-			Collections.sort(view.getRoot().getChildren(), new Comparator<TreeItem<Dossier>>() {
-	
-				@Override
-				public int compare(TreeItem<Dossier> o1, TreeItem<Dossier> o2) {
-					return compare(o1.getValue().getName(), o2.getValue().getName());
-				}
-
-				public int compare(String s1, String s2) {
-					System.out.println(s1 + " ; " + s2);
-					System.out.println(s1.compareTo(s2));
-					return s1.compareTo(s2);
-				}
-			});
+	public void modifyJson(TreeItem<Dossier> newValue) {
+		String path = null;
+		try{
+			path = newValue.getValue().getPathWithoutRoot();
 		}
-		else
-			System.out.println("null");
+		catch(NullPointerException e) {
+			
+		}
+		if(jsonMap.get(defaultLanguage).get(path) != null) {
+			jsonValue = path;
+			for(String key : jsonMap.keySet()) {
+				String value = "";
+				try {
+					value = jsonMap.get(key).get(path).getAsString();
+				}
+				catch(NullPointerException e) {
+					
+				}
+				mapTrad.get(key).setDescription(value);
+			}
+		}
+	}
+	
+	public void addItemEvent(TreeItem<Dossier> racine) {
+		ChangeListener<Boolean> lis = null;
+		for(TreeItem<Dossier> item : racine.getChildren()) {
+
+			lis = new ChangeListener<Boolean>() {
+
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+					System.out.println(item.getValue().getName() + " : " + (newValue ? "ouvert" : "fermé"));
+					if(newValue)
+						itemList.add(item);
+					else
+						itemList.remove(item);
+				}
+			};
+			item.expandedProperty().removeListener(lis);
+			item.expandedProperty().addListener(lis);
+			addItemEvent(item);
+		}
 	}
 }

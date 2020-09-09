@@ -57,6 +57,10 @@ public class TradBox extends HBox implements Comparable<TradBox> {
 		return this.description.getText();
 	}
 	
+	public TextField getDescriptionLabel(){
+		return this.description;
+	}
+	
 	public void setEditable(boolean canEdit) {
 		this.description.setDisable(!canEdit);
 	}

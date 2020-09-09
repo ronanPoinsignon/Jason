@@ -87,15 +87,15 @@ public class SceneProjetController implements Initializable {
 				System.out.println("NAME : " + fichier.getPath());
 				String fic = FileManager.readFile(fichier);
 				Matcher matcher = Pattern.compile("<[^>]*(/)?>").matcher(fic);
-				Matcher matcherVariable = Pattern.compile(pattern1 + "|" + pattern2).matcher(fic);
+				//Matcher matcherVariable = Pattern.compile(pattern1 + "|" + pattern2).matcher(fic);
 				while (matcher.find()) {
 					String m = matcher.group();
 					allMatches.add(m);
 				}
-				while (matcherVariable.find()) {
+				/*while (matcherVariable.find()) {
 					String m = matcherVariable.group();
 					System.out.println(m);
-				}
+				}*/
 			}
 			for(String m : allMatches) {
 				Matcher matcherVariable = Pattern.compile("(?<=id=\")([^\"*]*)(?=\")").matcher(m);

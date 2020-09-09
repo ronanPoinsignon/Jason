@@ -101,7 +101,7 @@ public class FileManager {
 		BufferedReader br = null;
 		StringBuilder informations = new StringBuilder();
 		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 			String line = "";
 			while ((line = br.readLine()) != null) {
 				informations.append(line);
@@ -111,7 +111,12 @@ public class FileManager {
 			throw e;
 		}
 		finally {
-			br.close();
+			try{
+				br.close();
+			}
+			catch(NullPointerException e) {
+				
+			}
 		}
 		return informations.toString();
 	}
