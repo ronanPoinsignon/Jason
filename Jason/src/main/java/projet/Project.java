@@ -53,7 +53,7 @@ public class Project {
 	private String defaultLanguage;
 	private TreeTableView<Dossier> view;
 	private ListView<TradBox> tradView;
-	private String jsonValue;
+	private String jsonValue, jsonValueTemp;
 	
 	public Project(Path traduction, Path page, String defaultLanguage, TreeTableView<Dossier> view, ListView<TradBox> tradView) throws IOException, NomVideException {
 		this.traductions = traduction;
@@ -221,24 +221,36 @@ public class Project {
 	public void handleModification(TradBox tradbox, String key) {
 		tradbox.setOnKeyPressed(kp -> {
 			if(kp.getCode().equals(KeyCode.ENTER) && jsonValue != null && !jsonValue.isEmpty()) {
-				boolean hasPb = false;
-				try {
-					JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription()), JsonElement.class);
-					jsonMap.get(key).add(jsonValue, je);
-					JsonConverter.saveJson(jsonMap.get(key), new File(traductions.toFile().getPath() + "\\" + key + ".json").toPath());
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-					jsonMap.remove(key);
-					mapTrad.remove(key);
-					tradView.getItems().remove(tradbox);
-				} catch(NullPointerException e) {
-					hasPb = true;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				tradbox.setEditable(!hasPb);
+				modifFile(tradbox, key);
 			}
 		});
+		tradbox.getDescriptionLabel().focusedProperty().addListener((ob, oldV, newV) -> {
+			if(oldV) {
+				modifFile(tradbox, key);
+			}
+		});
+	}
+	
+	public void modifFile(TradBox tradbox, String key) {
+		if(jsonValue == null)
+			return;
+		boolean hasPb = false;
+		try {
+			JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription()), JsonElement.class);
+			jsonMap.get(key).add(jsonValue, je);
+			JsonConverter.saveJson(jsonMap.get(key), new File(traductions.toFile().getPath() + "\\" + key + ".json").toPath());
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			jsonMap.remove(key);
+			mapTrad.remove(key);
+			tradView.getItems().remove(tradbox);
+		} catch(NullPointerException e) {
+			e.printStackTrace();
+			hasPb = true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		tradbox.setEditable(!hasPb);
 	}
 	
 	public void onDelete(File fichier) {
@@ -403,7 +415,6 @@ public class Project {
 
 				@Override
 				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-					System.out.println(item.getValue().getName() + " : " + (newValue ? "ouvert" : "fermé"));
 					if(newValue)
 						itemList.add(item);
 					else
