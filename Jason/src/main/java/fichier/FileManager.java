@@ -101,7 +101,7 @@ public class FileManager {
 		BufferedReader br = null;
 		StringBuilder informations = new StringBuilder();
 		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8.toString()));
 			String line = "";
 			while ((line = br.readLine()) != null) {
 				informations.append(line);

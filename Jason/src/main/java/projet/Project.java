@@ -53,7 +53,7 @@ public class Project {
 	private String defaultLanguage;
 	private TreeTableView<Dossier> view;
 	private ListView<TradBox> tradView;
-	private String jsonValue, jsonValueTemp;
+	private String jsonValue;
 	
 	public Project(Path traduction, Path page, String defaultLanguage, TreeTableView<Dossier> view, ListView<TradBox> tradView) throws IOException, NomVideException {
 		this.traductions = traduction;
