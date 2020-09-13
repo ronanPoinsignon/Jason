@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
@@ -122,21 +123,17 @@ public class FileManager {
 	}
 	
 	public static void writeFile(File file, String content) throws IOException {
-		FileOutputStream output = null;
-		PrintStream str = null;
+		OutputStreamWriter writer = null;
 		try {
-			output = new FileOutputStream(file);
-			str = new PrintStream(output, true, StandardCharsets.UTF_8.toString());
-			str.write(content.getBytes());
+			writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8.toString());
+			writer.write(content);
 		}
 		catch(IOException e) {
 			throw e;
 		}
 		finally {
-			if(str != null)
-				str.close();
-			if(output != null)
-				output.close();
+			if(writer != null)
+				writer.close();
 		}
 	}
 }
