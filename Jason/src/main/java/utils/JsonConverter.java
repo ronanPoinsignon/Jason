@@ -27,7 +27,7 @@ public class JsonConverter {
 	}
 	
 	public static String JsonObjectToString(JsonObject object) {
-		return new Gson().fromJson(object, String.class);
+		return new Gson().toJson(object);
 	}
 	
 	public static Object JsonObjectToObject(JsonObject jObject, Class<?> classe){

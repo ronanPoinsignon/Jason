@@ -1,5 +1,7 @@
 package projet.node;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import exception.NomVideException;
@@ -46,13 +48,15 @@ public class DossierReel extends Dossier {
 		DossierReel dossier = Racine.getRacine();
 		DossierReel dossierTemp = null;
 		String[] dossiers = path.split("\\.");
-		for(String dos : dossiers) {
-			dossierTemp = (DossierReel) dossier.get(dos);
+		Iterator<String> iterator = Arrays.stream(dossiers).iterator();
+	    while(iterator.hasNext()) {
+	    	String dos = iterator.next();
+	    	dossierTemp = (DossierReel) dossier.get(dos);
 			if(dossierTemp == null) {
 				dossierTemp = new DossierReel(dos);
 				dossier.ajouter(dossierTemp);
 			}
 			dossier = dossierTemp;
-		}
+	    }
 	}
 }

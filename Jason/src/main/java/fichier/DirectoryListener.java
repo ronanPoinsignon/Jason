@@ -4,65 +4,48 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimerTask;
 
 /**
  * Classe abstraite permettant la gestion des event d'un dossier.
  * @author ronan
  *
  */
-public abstract class DirectoryListener {
+public abstract class DirectoryListener extends TimerTask {
 
 	private File[] fileList;
 
 	private File folder;
-	private long interval;
 	
-	private boolean isStopped = false, exists;
+	private boolean exists;
 	
-	public DirectoryListener(File folder, long interval) {
+	public DirectoryListener(File folder) {
 		this.folder = folder;
-		this.interval = interval;
-		this.start();
 	}
 	
-	public void start() {
-		Thread th = new Thread(new Runnable() {
-			
-			@Override
-			public void run() {
-				while(!isStopped) {
-					if(!exists) {
-						if(folder.exists()) {
-							exists = true;
-							fileList = folder.listFiles();
-							DirectoryListener.this.onCreateDirectory();
-						}
-					}
-					else {
-						if(!folder.exists()) {
-							exists = false;
-							DirectoryListener.this.onDeleteDirectory();
-						}
-						else {
-							if(!Arrays.equals(fileList,folder.listFiles())){
-								List<File> listeFichiers = new ArrayList<>(Arrays.asList(folder.listFiles()));
-								List<File> liste = new ArrayList<>(listeFichiers);
-								liste.removeAll(Arrays.asList(fileList));
-								fileList = folder.listFiles();
-								DirectoryListener.this.onCreateFile(liste);
-							}
-						}
-					}
-					try {
-						Thread.sleep(interval);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+	public void run() {
+		if(!exists) {
+			if(folder.exists()) {
+				exists = true;
+				fileList = folder.listFiles();
+				DirectoryListener.this.onCreateDirectory();
+			}
+		}
+		else {
+			if(!folder.exists()) {
+				exists = false;
+				DirectoryListener.this.onDeleteDirectory();
+			}
+			else {
+				if(!Arrays.equals(fileList,folder.listFiles())){
+					List<File> listeFichiers = new ArrayList<>(Arrays.asList(folder.listFiles()));
+					List<File> liste = new ArrayList<>(listeFichiers);
+					liste.removeAll(Arrays.asList(fileList));
+					fileList = folder.listFiles();
+					DirectoryListener.this.onCreateFile(liste);
 				}
 			}
-		});
-		th.setDaemon(true);
-		th.start();
+		}
 	}
 
 	protected abstract void onCreateFile(List<File> liste);

@@ -1,8 +1,9 @@
 package projet.node;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import exception.NomVideException;
 
@@ -15,7 +16,7 @@ public abstract class Dossier implements Comparable<Dossier> {
 
 	private static final String delimitation = ".";
 		
-	private List<Dossier> files = new ArrayList<>();
+	private List<Dossier> files = Collections.synchronizedList(new ArrayList<>());
 
 	private Dossier dossierParent;
 	
@@ -70,21 +71,22 @@ public abstract class Dossier implements Comparable<Dossier> {
 	}
 	
 	public Dossier get(String name) throws NomVideException {
-		Dossier dossier = null;
-		try{
-			dossier = this.files.stream().filter(dos -> dos.getName().equals(name)).findFirst().get();
+		Iterator<Dossier> it = this.files.stream().iterator();
+		while(it.hasNext()) {
+			Dossier dos = it.next();
+			if(dos.getName().equals(name))
+				return dos;
 		}
-		catch(NoSuchElementException e) {
-
-		}
-		return dossier;
+		return null;
 	}
 	
 	public static void printArborescence(Dossier dossier) {
-		for(Dossier dos : dossier.getFiles()) {
-			System.out.println(dos.getName() + " => " + dos.getPath());
+		Iterator<Dossier> iterator = dossier.getFiles().iterator();
+	    while(iterator.hasNext()) {
+	    	Dossier dos = iterator.next();
+	    	System.out.println(dos.getName() + " => " + dos.getPath());
 			printArborescence(dos);
-		}
+	    }
 	}
 		
 	@Override

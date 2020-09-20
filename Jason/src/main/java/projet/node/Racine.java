@@ -15,7 +15,12 @@ public class Racine extends DossierReel {
 	
 	public static Racine getRacine() throws NomVideException {
 		if(racine == null)
-			racine = new Racine("root");
+			racine = new Racine(NAME);
+		return racine;
+	}
+	
+	public static Racine resetRacine() throws NomVideException {
+		racine = new Racine(NAME);
 		return racine;
 	}
 

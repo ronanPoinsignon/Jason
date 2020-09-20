@@ -3,6 +3,7 @@ package projet.treeView;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 import com.google.gson.JsonElement;
@@ -36,7 +37,9 @@ public class DossierTreeItem extends TreeItem<Dossier> {
 	
 	public static void generate(DossierTreeItem tree, Dossier dossier) throws NomVideException {
 		DossierTreeItem dossierTemp = null;
-		for(Dossier dos : dossier.getFiles()) {
+		Iterator<Dossier> iterator = dossier.getFiles().iterator();
+		while(iterator.hasNext()) {
+			Dossier dos = iterator.next();
 			dossierTemp = new DossierTreeItem(dos);
 			tree.add(dossierTemp);
 			tree = dossierTemp;

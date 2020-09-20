@@ -5,21 +5,35 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Timer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 
 import exception.NomVideException;
+import fichier.DirectoryListener;
+import fichier.FileListener;
 import fichier.FileManager;
+import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableColumn.SortType;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.input.KeyCode;
 import projet.Project;
 import projet.node.Dossier;
 import projet.tradBox.TradBox;
@@ -27,24 +41,63 @@ import utils.JsonConverter;
 
 public class SceneProjetController implements Initializable {
 
-	private static final String pattern1 = "(?<=[^>]*id=\")([^\"*]*)(?=\"[ ]*defaultMessage=\"[^\"]*\"[^>]*>)";
-	private static final String pattern2 = "(?<=[^>]*defaultMessage=\"[^\"]*\"[ ]{0,100}id=\")([^\"*]*)(?=\"[^>]*>)";
+	//private static final String pattern1 = "(?<=[^>]*id=\")([^\"*]*)(?=\"[ ]*defaultMessage=\"[^\"]*\"[^>]*>)";
+	//private static final String pattern2 = "(?<=[^>]*defaultMessage=\"[^\"]*\"[ ]{0,100}id=\")([^\"*]*)(?=\"[^>]*>)";
 	
-	
+
 	@FXML
 	TreeTableView<Dossier> idTreeTableViewJson;
 	
 	@FXML
 	ListView<TradBox> idListViewTraduction;
 	
+	private Map<File, Timer> timerList = new HashMap<>();
+	private Map<String, JsonObject> jsonMap = new HashMap<>();
+	private Map<String, JsonObject> jsonMapTemp = new HashMap<>();
+	private Map<String, TradBox> mapTrad = new HashMap<>();
+	private List<TreeItem<Dossier>> itemList = Collections.synchronizedList(new ArrayList<>());
+	private List<String> pathList = Collections.synchronizedList(new ArrayList<>());
+	
 	private Path traductions, page;
 	private String langue;
-	@SuppressWarnings("unused")
 	private Project projet;
+	private String jsonValue;
+
+	private int changeCount = 0;
 	
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		
+		idTreeTableViewJson.getSelectionModel().selectedItemProperty()
+		.addListener((observable, oldValue, newValue) -> {
+			String value = projet.modifyJsonValue(mapTrad, jsonMapTemp, newValue);
+			if(value != null)
+				jsonValue = value;
+		});
+
+		TreeTableColumn<Dossier, String> colonne = new TreeTableColumn<>("Variables");
+		colonne.prefWidthProperty().bind(idTreeTableViewJson.widthProperty());
+		colonne.setResizable(false);
+		colonne.setCellValueFactory(p -> {
+			return new ReadOnlyStringWrapper(p.getValue().getValue().getName());
+		});
+		idTreeTableViewJson.getColumns().add(colonne);
+		idTreeTableViewJson.getSortOrder().add(colonne);
+		colonne.setSortType(SortType.DESCENDING);
+		idTreeTableViewJson.setShowRoot(false);
+	}
+
+	public void initialize(Path traductions, Path page, String defaultLanguage) throws IOException, NomVideException {
+		this.traductions = traductions;
+		this.page = page;
+		this.langue = defaultLanguage;
+		//readFiles(page.toFile(), new JsonObject());
+		projet = new Project(langue);
+		addFileEvent();
+		projet.setJsonList(jsonMap, pathList, traductions);
+		jsonMapTemp = jsonMap;
+		projet.setArborescence(jsonMap, itemList, idTreeTableViewJson);
+		setLanguageList();
+		setFileListener();
 	}
 	
 	@FXML
@@ -66,14 +119,6 @@ public class SceneProjetController implements Initializable {
 
 	public String getLangue() {
 		return langue;
-	}
-	
-	public void initialize(Path traductions, Path page, String defaultLanguage) throws IOException, NomVideException {
-		this.traductions = traductions;
-		this.page = page;
-		this.langue = defaultLanguage;
-		//readFiles(page.toFile(), new JsonObject());
-		projet = new Project(traductions, page, langue, idTreeTableViewJson, idListViewTraduction);
 	}
 	
 	public JsonObject readFiles(File file, JsonObject json) throws IOException {
@@ -110,5 +155,249 @@ public class SceneProjetController implements Initializable {
 		}
 		return json;
 	}
+	
+	public void addFileEvent() {
+		DirectoryListener dir = new DirectoryListener(traductions.toFile()) {
+			
+			@Override
+			protected void onDeleteDirectory() {
+				
+			}
+			
+			@Override
+			protected void onCreateDirectory() {
+				
+			}
+			
+			@Override
+			protected void onCreateFile(List<File> liste) {
+				for(File fichier : liste) {
+					if(!pathList.contains(fichier.getPath())) {
+						String key = fichier.getName().substring(0, fichier.getName().lastIndexOf(".json"));
+						pathList.add(fichier.getPath());
+						addTradBox(fichier, key);
+						FileListener listener;
+						listener = new FileListener(fichier) {
+							
+							@Override
+							protected void onDelete() {
+								SceneProjetController.this.onDelete(fichier);
+							}
+							
+							@Override
+							protected void onCreate() {
+								SceneProjetController.this.addTradBox(fichier, key);
+							}
+							
+							@Override
+							protected void onChange() {
+								SceneProjetController.this.onChange(fichier, key);
+							}
+						};
+						Timer timer = new Timer(true);
+						timer.schedule(listener, new Date(), 1000);
+						timerList.put(fichier, timer);
+					}
+				}
+			}
+		};
+		Timer timer = new Timer(true);
+		timer.schedule(dir, new Date(), 1000);
+		timerList.put(traductions.toFile(), timer);
+	}
+	
+	public void handleModification(TradBox tradbox, String key) {
+		tradbox.getDescriptionLabel().setOnKeyTyped(evt -> {
+			if(jsonValue == null)
+				return;
+			if(evt.getCharacter() == null || evt.getCharacter().isEmpty() || (int)evt.getCharacter().charAt(0) < 32) {
+				evt.consume();
+				return;
+			}
+			JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription() + evt.getCharacter()), JsonElement.class);
+			jsonMapTemp.get(key).add(jsonValue, je);
+		});
+		tradbox.getDescriptionLabel().setOnKeyPressed(evt -> {
+			if(jsonValue == null)
+				return;
+			if(evt.getCode() != KeyCode.BACK_SPACE) {
+				evt.consume();
+				return;
+			}
+			JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription()), JsonElement.class);
+			jsonMapTemp.get(key).add(jsonValue, je);
+		});
+		/*tradbox.getDescriptionLabel().textProperty().addListener((obs, oldV, newV) -> {
+				JsonElement je = new Gson().fromJson(new Gson().toJson(newV), JsonElement.class);
+				System.out.println(jsonMapTemp);
+				try {
+					jsonMapTemp.get(key).add(jsonValue, je);
+				}
+				catch(NullPointerException e) {
+					System.out.println("null");
+				}
+		});*/
+	}
+	
+	public void handleModif() {
+		try {
+			projet.modifFiles(jsonMapTemp, traductions);
+			jsonMap = jsonMapTemp;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	/*public void handleModif(TradBox tradbox, String key){
+		boolean hasPb = false;
+		try {
+			//projet.modifFile(jsonMap, traductions, tradbox, jsonValue, key);
+			for(String keySet : jsonMap.keySet()) {
+				JsonObject json = jsonMap.get(keySet);
+				if(jsonValue == null)
+					return;
+				JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription()), JsonElement.class);
+				jsonMap.get(key).add(jsonValue, je);
+				File file = new File(traductions.toFile().getPath() + "\\" + keySet + ".json");
+				projet.modifFile(json, file, timerList.get(file));
+			}
+			//projet.modifFiles(jsonMap, traductions);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			jsonMap.remove(key);
+			mapTrad.remove(key);
+			idListViewTraduction.getItems().remove(tradbox);
+		} catch(NullPointerException e) {
+			e.printStackTrace();
+			hasPb = true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		tradbox.setEditable(!hasPb);
+	}*/
+	
+	public void addTradBox(File fichier, String key) {
+		JsonObject json = null;
+		String value = "";
+		boolean hasPb = false;
+		try {
+			json = JsonConverter.getJsonFromFile(fichier.toPath());
+			value = json.get(jsonValue).getAsString();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch(JsonSyntaxException e) {
+			hasPb = true;
+		} catch(NullPointerException e) {
+			
+		}
+		TradBox tr = new TradBox(key, value);
+		tr.setEditable(!hasPb);
+		handleModification(tr, key);
+		Platform.runLater(new Runnable() {
+			@Override
+			public void run() {
+				idListViewTraduction.getItems().add(tr);
+				sortTradView();
+			}
+		});
+		try {
+			json = JsonConverter.sortJson(json);
+		} catch(NullPointerException e) {
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		jsonMap.put(key, json);
+		mapTrad.put(key, tr);
+	}
 
+	public void setLanguageList() {
+		for(File fichier : traductions.toFile().listFiles()) {
+			if(fichier.getName().endsWith(".json")) {
+				String name = fichier.getName().substring(0, fichier.getName().lastIndexOf(".json"));
+				addTradBox(fichier, name);
+			}
+		}
+	}
+	
+	public void setFileListener() {
+		for(File file : traductions.toFile().listFiles()) {
+			FileListener listener;
+			listener = new FileListener(file) {
+				
+				@Override
+				public void onDelete() {
+					SceneProjetController.this.onDelete(file);
+				}
+				
+				@Override
+				public void onCreate() {
+					SceneProjetController.this.addTradBox(file, file.getName().substring(0, file.getName().lastIndexOf(".json")));
+				}
+				
+				@Override
+				public void onChange() {
+					String key = file.getName().substring(0, file.getName().lastIndexOf(".json"));
+					SceneProjetController.this.onChange(file, key);
+				}
+			};
+			Timer timer = new Timer(true);
+			timer.schedule(listener, new Date(), 1000);
+			timerList.put(file, timer);
+		}
+	}
+	
+	public void sortTradView() {
+		Platform.runLater(new Runnable() {
+			
+			@Override
+			public void run() {
+				Collections.sort(idListViewTraduction.getItems(), new java.util.Comparator<TradBox>() {
+				    @Override
+				    public int compare(TradBox o1, TradBox o2) {
+				        return o1.getTitre().compareTo(o2.getTitre());
+				    }
+				});
+			}
+		});
+	}
+	
+	public void onDelete(File file) {
+		String key = file.getName().substring(0, file.getName().lastIndexOf(".json"));
+		mapTrad.remove(key);
+		jsonMap.remove(key);
+		Platform.runLater(new Runnable() {
+			@Override
+			public void run() {
+				TradBox tr = mapTrad.get(key);
+				idListViewTraduction.getItems().remove(tr);
+			}
+		});
+	}
+	
+	public void onChange(File fichier, String key) {
+		changeCount++;
+		JsonObject json = projet.onChange(mapTrad, jsonMap, fichier);
+		idListViewTraduction.getItems().forEach(item -> {
+			if(item.getTitre().startsWith(key)) {
+				try {
+					item.setDescription(json.get(jsonValue).getAsString());									
+				}
+				catch(NullPointerException e) {
+					item.setDescription("");
+				}
+			}
+		});
+		if(changeCount == 1) {
+			try {
+				projet.setArborescence(jsonMap, itemList, idTreeTableViewJson);
+			} catch (NomVideException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			sortTradView();
+		}
+		changeCount--;
+	}
 }
