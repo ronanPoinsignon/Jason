@@ -26,6 +26,8 @@ import fichier.FileListener;
 import fichier.FileManager;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
@@ -33,7 +35,6 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumn.SortType;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.input.KeyCode;
 import projet.Project;
 import projet.node.Dossier;
 import projet.tradBox.TradBox;
@@ -55,6 +56,7 @@ public class SceneProjetController implements Initializable {
 	private Map<String, JsonObject> jsonMap = new HashMap<>();
 	private Map<String, JsonObject> jsonMapTemp = new HashMap<>();
 	private Map<String, TradBox> mapTrad = new HashMap<>();
+	private Map<TradBox, ChangeListener<String>> mapListener = new HashMap<>();
 	private List<TreeItem<Dossier>> itemList = Collections.synchronizedList(new ArrayList<>());
 	private List<String> pathList = Collections.synchronizedList(new ArrayList<>());
 	
@@ -69,9 +71,11 @@ public class SceneProjetController implements Initializable {
 	public void initialize(URL location, ResourceBundle resources) {
 		idTreeTableViewJson.getSelectionModel().selectedItemProperty()
 		.addListener((observable, oldValue, newValue) -> {
+			removeListeners();
 			String value = projet.modifyJsonValue(mapTrad, jsonMapTemp, newValue);
 			if(value != null)
 				jsonValue = value;
+			addListeners();
 		});
 
 		TreeTableColumn<Dossier, String> colonne = new TreeTableColumn<>("Variables");
@@ -85,7 +89,19 @@ public class SceneProjetController implements Initializable {
 		colonne.setSortType(SortType.DESCENDING);
 		idTreeTableViewJson.setShowRoot(false);
 	}
+	
+	public void removeListeners() {
+		for(TradBox tr : mapListener.keySet()) {
+			tr.getDescriptionLabel().textProperty().removeListener(mapListener.get(tr));
+		}
+	}
 
+	public void addListeners() {
+		for(TradBox tr : mapListener.keySet()) {
+			tr.getDescriptionLabel().textProperty().addListener(mapListener.get(tr));
+		}
+	}
+	
 	public void initialize(Path traductions, Path page, String defaultLanguage) throws IOException, NomVideException {
 		this.traductions = traductions;
 		this.page = page;
@@ -207,36 +223,23 @@ public class SceneProjetController implements Initializable {
 	}
 	
 	public void handleModification(TradBox tradbox, String key) {
-		tradbox.getDescriptionLabel().setOnKeyTyped(evt -> {
-			if(jsonValue == null)
-				return;
-			if(evt.getCharacter() == null || evt.getCharacter().isEmpty() || (int)evt.getCharacter().charAt(0) < 32) {
-				evt.consume();
-				return;
-			}
-			JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription() + evt.getCharacter()), JsonElement.class);
-			jsonMapTemp.get(key).add(jsonValue, je);
-		});
-		tradbox.getDescriptionLabel().setOnKeyPressed(evt -> {
-			if(jsonValue == null)
-				return;
-			if(evt.getCode() != KeyCode.BACK_SPACE) {
-				evt.consume();
-				return;
-			}
-			JsonElement je = new Gson().fromJson(new Gson().toJson(tradbox.getDescription()), JsonElement.class);
-			jsonMapTemp.get(key).add(jsonValue, je);
-		});
-		/*tradbox.getDescriptionLabel().textProperty().addListener((obs, oldV, newV) -> {
-				JsonElement je = new Gson().fromJson(new Gson().toJson(newV), JsonElement.class);
-				System.out.println(jsonMapTemp);
+		ChangeListener<String> listener = new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> obs, String oldV, String newV) {
 				try {
+					if(jsonValue == null)
+						return;
+					JsonElement je = new Gson().fromJson(new Gson().toJson(newV), JsonElement.class);
 					jsonMapTemp.get(key).add(jsonValue, je);
 				}
-				catch(NullPointerException e) {
-					System.out.println("null");
+				catch(Exception e) {
+					e.printStackTrace();
 				}
-		});*/
+			}
+		};
+		mapListener.put(tradbox, listener);
+		tradbox.getDescriptionLabel().textProperty().addListener(listener);
 	}
 	
 	public void handleModif() {

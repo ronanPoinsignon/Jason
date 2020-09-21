@@ -182,7 +182,7 @@ public class Project {
 			path = newValue.getValue().getPathWithoutRoot();
 		}
 		catch(NullPointerException e) {
-			
+
 		}
 		if(jsonMap.get(defaultLanguage).get(path) != null) {
 			for(String key : jsonMap.keySet()) {
@@ -191,7 +191,7 @@ public class Project {
 					value = jsonMap.get(key).get(path).getAsString();
 				}
 				catch(NullPointerException e) {
-					
+
 				}
 				mapTrad.get(key).setDescription(value);
 			}
